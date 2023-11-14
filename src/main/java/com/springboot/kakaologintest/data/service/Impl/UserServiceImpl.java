@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.kakaologintest.data.dto.KakaoProfile;
 import com.springboot.kakaologintest.data.dto.OauthToken;
+import com.springboot.kakaologintest.data.entity.EmailConfirmation;
 import com.springboot.kakaologintest.data.entity.User;
+import com.springboot.kakaologintest.data.repository.ConfirmationRepository;
 import com.springboot.kakaologintest.data.repository.UserRepository;
 import com.springboot.kakaologintest.data.service.UserService;
 import com.springboot.kakaologintest.jwt.JwtProperties;
@@ -42,6 +44,10 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ConfirmationRepository confirmationRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
     public OauthToken getAccessToken(String code){
         RestTemplate rt = new RestTemplate();
@@ -193,6 +199,18 @@ public class UserServiceImpl implements UserService {
             // 유효하지 않은 토큰인 경우
             throw new RuntimeException("Invalid token");
         }
-    }
 
+    }
+    public void savePersonalEmail(Long uid, String personalEmail) {
+        User user = userRepository.findById(uid).orElse(null);
+        if (user != null) {
+            user.setPersonalEmail(personalEmail);
+            userRepository.save(user);
+        }
+
+    }
+    public boolean isEmailVerified(String personalEmail) {
+        EmailConfirmation confirmation = confirmationRepository.findByPersonalEmail(personalEmail);
+        return confirmation != null && confirmation.isVerified();
+    }
 }

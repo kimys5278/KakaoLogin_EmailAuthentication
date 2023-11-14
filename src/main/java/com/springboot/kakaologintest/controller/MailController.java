@@ -15,12 +15,24 @@ import javax.validation.Valid;
 @RequiredArgsConstructor
 public class MailController {
     private final MailService mailService;
-
+    //이메일로 인증번호 전송
     @PostMapping("/emailConfirm")
     public String emailConfirm(@RequestParam String email) throws Exception {
 
-        String confirm = mailService.sendSimpleMessage(email);
+        String confirmMessage = mailService.sendSimpleMessage(email);
 
-        return confirm;
+        return confirmMessage;
     }
+    // 인증번호만을 사용하여 인증 처리
+    @PostMapping("/verifyEmail")
+    public ResponseEntity<String> verifyEmail(@RequestParam String confirmationCode) {
+        boolean isVerified = mailService.verifyEmail(confirmationCode);
+        if (isVerified) {
+            return ResponseEntity.ok("인증이 완료되었습니다.");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증번호가 일치하지 않습니다.");
+        }
+    }
+
+
 }

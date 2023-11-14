@@ -15,4 +15,6 @@ public interface UserService {
     String getKakaoToken(String jwtToken);
     User getUser(HttpServletRequest request);
     DecodedJWT verifyToken(String token);
+    boolean isEmailVerified(String personalEmail);
+    void savePersonalEmail(Long uid, String personalEmail);
 }

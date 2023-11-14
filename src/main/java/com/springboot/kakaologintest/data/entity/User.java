@@ -23,45 +23,36 @@ public class User extends  BaseEntity{
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "kakao_nickname")
-    private String nickname;
-
     @Column(name = "kakao_email")
     private String email;
 
     @Column(name = "user_nickname")
-    public String user_nickname;
-
-    @Column(name = "major_num")
-    public Long major_num;
-
-    @Column(name = "phone_number")
-    public Long phone_number;
-
-    @Column(name = "gender")
-    public String gender;
+    public String nickname;
 
     @Column(name = "user_role")
     private String UserRole;
 
-    @Column(name = "major")
-    private String major;
+    @Column
+    private String gender;
+
+    @Column(name = "personal_email")
+    private String personalEmail;
+
     @Builder
-    public User(Long uid,Long id, String nickname,String email,String gender, String userRole,String major,Long major_num, Long phone_number
-                ,String user_nickname) {
+    public User(Long uid,Long id, String nickname,String email
+            ,String gender, String userRole,String personalEmail) {
         this.uid = uid;
         this.id = id;
         this.nickname = nickname;
         this.email = email;
         this.gender = gender;
         this.UserRole = userRole;
-        this.major = major;
-        this.major_num = major_num;
-        this.phone_number = phone_number;
-        this.user_nickname = user_nickname;
+        this.personalEmail = personalEmail;
     }
 
     public User() {
 
     }
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private EmailConfirmation emailConfirmation;
 }
