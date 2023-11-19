@@ -33,6 +33,22 @@ public class MailController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증번호가 일치하지 않습니다.");
         }
     }
+//    @PostMapping("/emailConfirmAndVerify")
+//    public ResponseEntity<String> emailConfirmAndVerify(@RequestParam String email, @RequestParam(required = false) String confirmationCode) throws Exception {
+//        // 먼저 이메일 전송 처리
+//        if (confirmationCode == null) {
+//            String confirmMessage = mailService.sendSimpleMessage(email);
+//            return ResponseEntity.ok("인증번호가 전송되었습니다: " + confirmMessage);
+//        } else {
+//            // 이메일 인증번호 검증 처리
+//            boolean isVerified = mailService.verifyEmail(confirmationCode);
+//            if (isVerified) {
+//                return ResponseEntity.ok("인증이 완료되었습니다.");
+//            } else {
+//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증번호가 일치하지 않습니다.");
+//            }
+//        }
+//    }
 
 
 }

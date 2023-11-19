@@ -33,6 +33,7 @@ import java.util.Date;
 @Transactional
 @Service
 public class UserServiceImpl implements UserService {
+
     @Value("${kakao.client.id}")
     private String clientId;
 
@@ -117,6 +118,7 @@ public class UserServiceImpl implements UserService {
     }
 
     public String createToken(User user){
+        logger.info("[createToken] 토큰 생성 시작");
         String jwtToken = JWT.create()
                 //토큰이름 -> 유저이메일
                 .withSubject(user.getEmail())
@@ -125,6 +127,7 @@ public class UserServiceImpl implements UserService {
 
                 //(2-5)
                 .sign(Algorithm.HMAC512(JwtProperties.SECRET));
+        logger.info("[createToken] 토큰 생성 완료");
         System.out.println("JWT Token: " + jwtToken); // JWT Token 출력
         return jwtToken;
     }
