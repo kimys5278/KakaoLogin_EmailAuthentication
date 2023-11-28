@@ -1,58 +1,77 @@
 package com.springboot.kakaologintest.data.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 
 import javax.persistence.*;
 import java.security.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Entity
-@Data
+//@Data
 @Setter
 @Getter
-
-public class User extends  BaseEntity{
+public class User extends  BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="uid")
+    @Column(name = "uid")
     private Long uid;
 
-    @Column(name = "id")
-    private Long id;
+    @Column
+    private String name;
 
-    @Column(name = "kakao_email")
-    private String email;
+    @Column
+    private String nickname;
 
-    @Column(name = "user_nickname")
-    public String nickname;
+    @Column
+    private String major;
 
-    @Column(name = "user_role")
-    private String UserRole;
+    @Column
+    private Long major_num;
 
     @Column
     private String gender;
 
-    @Column(name = "personal_email")
-    private String personalEmail;
+    @Column(unique = true) // 중복을 방지하기 위해 unique 속성 추가
+    private String email;
+
+    @Column(unique = true) // 중복을 방지하기 위해 unique 속성 추가
+    private Long kakaoId;
+
+    @Column(unique = true) // 중복을 방지하기 위해 unique 속성 추가
+    private String userRole;
 
     @Builder
-    public User(Long uid,Long id, String nickname,String email
-            ,String gender, String userRole,String personalEmail) {
+    public User(Long uid, String name, String nickname, String major,
+                Long major_num, String gender, String email, Long kakaoId,String userRole) {
         this.uid = uid;
-        this.id = id;
+        this.name = name;
         this.nickname = nickname;
-        this.email = email;
+        this.major = major;
+        this.major_num = major_num;
         this.gender = gender;
-        this.UserRole = userRole;
-        this.personalEmail = personalEmail;
+        this.email = email;
+        this.kakaoId = kakaoId;
+        this.userRole = userRole;
+
     }
 
     public User() {
 
     }
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private EmailConfirmation emailConfirmation;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<Member> appointmentList;
+
 }

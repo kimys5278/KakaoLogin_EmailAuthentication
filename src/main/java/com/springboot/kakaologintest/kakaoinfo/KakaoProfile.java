@@ -1,4 +1,4 @@
-package com.springboot.kakaologintest.data.dto;
+package com.springboot.kakaologintest.kakaoinfo;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;

@@ -1,7 +1,9 @@
 package com.springboot.kakaologintest.data.service.Impl;
 
 import com.springboot.kakaologintest.data.entity.EmailConfirmation;
+import com.springboot.kakaologintest.data.entity.User;
 import com.springboot.kakaologintest.data.repository.ConfirmationRepository;
+import com.springboot.kakaologintest.data.repository.UserRepository;
 import com.springboot.kakaologintest.data.service.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -10,16 +12,18 @@ import org.springframework.mail.MailException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.Message;
+import javax.servlet.http.HttpServletRequest;
 
 @Service
 @RequiredArgsConstructor
 public class MailServiceImpl implements MailService {
     private final JavaMailSender emailSender;
     private final ConfirmationRepository confirmationRepository;
+    private  final UserRepository userRepository;
 
     @Override
     public String sendSimpleMessage(String to) throws Exception {
-        String ePw = createKey(); // 인증번호 생성
+    String ePw = createKey(); // 인증번호 생성
 
         // 이메일과 인증번호를 데이터베이스에 저장
         EmailConfirmation confirmation = new EmailConfirmation();
@@ -38,11 +42,14 @@ public class MailServiceImpl implements MailService {
     }
 
     // 인증번호 검증 메서드
-    public boolean verifyEmail(String confirmationCode) {
+    public boolean verifyEmail(String confirmationCode, HttpServletRequest request) {
+        Long kakaoId = (Long) request.getSession().getAttribute("kakaoId");
         EmailConfirmation confirmation = confirmationRepository.findByConfirmationCode(confirmationCode);
-        if (confirmation != null && !confirmation.isVerified()) {
+       if (confirmation != null && !confirmation.isVerified()) {
             confirmation.setVerified(true);
+           confirmation.setKakaoId(kakaoId); // 카카오 아이디 설정
             confirmationRepository.save(confirmation);
+
             return true;
         }
         return false;

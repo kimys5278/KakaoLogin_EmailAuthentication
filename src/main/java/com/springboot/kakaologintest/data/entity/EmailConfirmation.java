@@ -24,7 +24,8 @@ public class EmailConfirmation {
     @Column
     private boolean isVerified = false;
 
-    @OneToOne
-    @JoinColumn(name = "uid")
-    private User user;
+    @Column
+    private Long kakaoId; // 카카오 ID 필드 추가
+
+
 }

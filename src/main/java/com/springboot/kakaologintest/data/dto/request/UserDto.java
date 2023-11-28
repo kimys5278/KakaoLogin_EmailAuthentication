@@ -1,11 +1,9 @@
-package com.springboot.kakaologintest.data.dto;
+package com.springboot.kakaologintest.data.dto.request;
 
 import lombok.Data;
 
 @Data
-public class KUserResponseDto {
-    private Long K_id;
-
+public class UserDto {
     private String name;
 
     private String nickname;

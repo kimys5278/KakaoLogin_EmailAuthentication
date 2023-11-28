@@ -1,4 +1,4 @@
-package com.springboot.kakaologintest.data.dto;
+package com.springboot.kakaologintest.kakaoinfo;
 
 
 import lombok.Data;

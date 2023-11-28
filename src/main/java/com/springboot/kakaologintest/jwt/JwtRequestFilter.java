@@ -50,7 +50,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         // 만약 토큰이 만료되었거나 유효하지 않은 경우에 대비하여 예외 처리를 수행
         try {
             usercode = JWT.require(Algorithm.HMAC512(JwtProperties.SECRET)).build().verify(token)
-                    .getClaim("id").asLong();
+                    .getClaim("uid").asLong();
 
         } catch (TokenExpiredException e) {
             e.printStackTrace();

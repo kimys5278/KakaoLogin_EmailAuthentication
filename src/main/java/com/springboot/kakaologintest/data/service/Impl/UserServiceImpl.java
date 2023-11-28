@@ -7,14 +7,22 @@ import com.auth0.jwt.interfaces.JWTVerifier;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.springboot.kakaologintest.data.dto.KakaoProfile;
-import com.springboot.kakaologintest.data.dto.OauthToken;
+
+import com.springboot.kakaologintest.data.dto.request.UserDto;
+
+
+import com.springboot.kakaologintest.data.dto.response.BaseResponseDto;
+import com.springboot.kakaologintest.data.dto.response.UserResponseDto;
 import com.springboot.kakaologintest.data.entity.EmailConfirmation;
 import com.springboot.kakaologintest.data.entity.User;
+
 import com.springboot.kakaologintest.data.repository.ConfirmationRepository;
 import com.springboot.kakaologintest.data.repository.UserRepository;
 import com.springboot.kakaologintest.data.service.UserService;
 import com.springboot.kakaologintest.jwt.JwtProperties;
+import com.springboot.kakaologintest.kakaoinfo.KakaoProfile;
+import com.springboot.kakaologintest.kakaoinfo.OauthToken;
+import io.jsonwebtoken.Jwts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +36,12 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.Date;
 
 @Transactional
 @Service
-public class UserServiceImpl implements UserService {
-
+public class UserServiceImpl implements UserService  {
     @Value("${kakao.client.id}")
     private String clientId;
 
@@ -43,17 +51,22 @@ public class UserServiceImpl implements UserService {
     @Value("${kakao.client.secret}")
     private String clientSecret;
 
-    @Autowired
+
+
     private UserRepository userRepository;
+    private ConfirmationRepository confirmationRepository;
 
     @Autowired
-    private ConfirmationRepository confirmationRepository;
+    public UserServiceImpl(UserRepository userRepository,ConfirmationRepository confirmationRepository){
+        this.userRepository = userRepository;
+        this.confirmationRepository = confirmationRepository;
+    }
+
 
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
     public OauthToken getAccessToken(String code){
         RestTemplate rt = new RestTemplate();
-        //타임아웃  설정시 HttpComponentsClientHttpRequestFactory 객체 생성
-        //우리는 타임아웃 설정안함.
+
         rt.setRequestFactory(new HttpComponentsClientHttpRequestFactory());
 
         HttpHeaders headers = new HttpHeaders();
@@ -66,7 +79,7 @@ public class UserServiceImpl implements UserService {
         params.add("code", code);
         params.add("client_secret", clientSecret); // 생략 가능!
 
-        HttpEntity<MultiValueMap<String,String>>kakaoTokenRequest =
+        HttpEntity<MultiValueMap<String,String>> kakaoTokenRequest =
                 new HttpEntity<>(params,headers);
         //HttpEntity는 HTTP 요청에 필요한 데이터와 헤더 정보를 함께 묶어 표현하는 역할.
 
@@ -92,57 +105,8 @@ public class UserServiceImpl implements UserService {
         }
         System.out.println("카카오 AcessToken = "+oauthToken.getAccess_token());
 
-
         return oauthToken;
 
-    }
-
-    public String saveUserAndGetToken(String token){
-
-        KakaoProfile profile  = findProfile(token);
-        User user = userRepository.findByEmail(profile.getKakao_account().getEmail());
-        if(user == null){
-            user = User.builder()
-                    .id(profile.getId())
-                    .nickname(profile.getKakao_account().getProfile().getNickname())
-                    .email(profile.getKakao_account().getEmail())
-
-                    .gender(profile.getKakao_account().gender)
-                    .userRole("ROLE_USER").build();
-
-            userRepository.save(user);
-        }
-        String userToken = createToken(user);
-        System.out.println("User Token: " + userToken); // User Token 출력
-        return createToken(user);
-    }
-
-    public String createToken(User user){
-        logger.info("[createToken] 토큰 생성 시작");
-        String jwtToken = JWT.create()
-                //토큰이름 -> 유저이메일
-                .withSubject(user.getEmail())
-                //토큰 만료시간
-                .withExpiresAt(new Date(System.currentTimeMillis()+ JwtProperties.EXPIRATION_TIME))
-
-                //(2-5)
-                .sign(Algorithm.HMAC512(JwtProperties.SECRET));
-        logger.info("[createToken] 토큰 생성 완료");
-        System.out.println("JWT Token: " + jwtToken); // JWT Token 출력
-        return jwtToken;
-    }
-
-    // UserService 클래스 안에 메소드 추가
-    public String getKakaoToken(String jwtToken) {
-        // JWT 토큰 검증
-        DecodedJWT decodedJWT = verifyToken(jwtToken);
-
-        // JWT 클레임에서 원하는 정보 추출
-        // 예를 들어, "usercode" 클레임을 추출하는 경우
-        Long usercode = decodedJWT.getClaim("uid").asLong();
-
-        // 추출한 정보를 문자열로 반환 (사용자 식별 정보 또는 다른 필요한 정보에 따라 변경)
-        return usercode.toString();
     }
 
     public KakaoProfile findProfile(String token) {
@@ -179,18 +143,52 @@ public class UserServiceImpl implements UserService {
         return kakaoProfile;
     }
 
-    public User getUser(HttpServletRequest request) { //(1)
-        //(2)
-        String email = (String)request.getAttribute("email");
+    @Override
+    public String saveUserAndGetToken(String token, HttpServletRequest request) {
+        try {
+            KakaoProfile profile = findProfile(token);
 
-        //(3)
-        User user = userRepository.findByEmail(email);
+            request.getSession().setAttribute("kakaoId", profile.getId());
 
-        //(4)
-        System.out.println("getUser : "+user);
-        return user;
-
+            User user = userRepository.findByKakaoId(profile.getId());
+            if (user != null && user.getKakaoId() != null) {
+                return createToken(user);
+            } else {
+                return "로그인 실패: 인가코드가 틀렸거나,신규 회원이 아니라면 회원가입을 하세요.";
+            }
+        } catch (Exception e) {
+            // findProfile에서 발생한 예외 처리
+            logger.error("로그인 실패: ", e);
+            return "로그인 실패";
+        }
     }
+
+    public String createToken(User user){
+        String jwtToken = JWT.create()
+                //토큰이름 -> 유저이메일
+                .withSubject(user.getEmail())
+                //토큰 만료시간
+                .withExpiresAt(new Date(System.currentTimeMillis()+ JwtProperties.EXPIRATION_TIME))
+
+                //(2-5)
+                .sign(Algorithm.HMAC512(JwtProperties.SECRET));
+        return jwtToken;
+    }
+
+    // UserService 클래스 안에 메소드 추가
+    public String getKakaoToken(String jwtToken) {
+        // JWT 토큰 검증
+        DecodedJWT decodedJWT = verifyToken(jwtToken);
+
+        // JWT 클레임에서 원하는 정보 추출
+        // 예를 들어, "u_id" 클레임을 추출하는 경우
+        Long uid = decodedJWT.getClaim("uid").asLong();
+
+        // 추출한 정보를 문자열로 반환 (사용자 식별 정보 또는 다른 필요한 정보에 따라 변경)
+        return uid.toString();
+    }
+
+
 
     public DecodedJWT verifyToken(String token) {
         try {
@@ -202,18 +200,70 @@ public class UserServiceImpl implements UserService {
             // 유효하지 않은 토큰인 경우
             throw new RuntimeException("Invalid token");
         }
-
     }
-    public void savePersonalEmail(Long uid, String personalEmail) {
-        User user = userRepository.findById(uid).orElse(null);
-        if (user != null) {
-            user.setPersonalEmail(personalEmail);
+
+    @Override
+    public String getUsername(String token){
+        logger.info("[getUsername] 토큰 기반 회원 구별 정보 추출");
+        String info = Jwts.parser().setSigningKey(JwtProperties.SECRET.getBytes()).parseClaimsJws(token).getBody()
+                .getSubject();
+        logger.info("[getUsername] 토큰 기반 회원 구별 정보 추출 완료, info: {}", info);
+        return info;
+    }
+
+
+    @Override
+    public UserResponseDto getUsers(Long id) {
+        User user = userRepository.findById(id).get();
+        UserResponseDto userResponseDto = new UserResponseDto();
+        userResponseDto.setId(user.getUid());
+        userResponseDto.setName(user.getName());
+        userResponseDto.setNickname(user.getNickname());
+        userResponseDto.setMajor(user.getMajor());
+        userResponseDto.setMajor_num(user.getMajor_num());
+        userResponseDto.setGender(user.getGender());
+
+        return userResponseDto;
+    }
+
+    // 카카오 ID를 세션에 저장하는 메서드
+//    @Override
+//    public void saveKakaoIdInSession(String token, HttpServletRequest request) {
+//        KakaoProfile profile = findProfile(token);
+//        request.getSession().setAttribute("kakaoId", profile.getId());
+//
+//    }
+
+    // 회원 정보 입력 및 카카오 ID를 세션에서 가져오는 메서드
+    @Override
+    public String saveUserWithSessionInfo(UserDto userDto, HttpServletRequest request) {
+
+        Long kakaoId = (Long) request.getSession().getAttribute("kakaoId");
+        User user = userRepository.findByKakaoId(kakaoId);
+
+        EmailConfirmation confirmation = confirmationRepository.findByKakaoId(kakaoId);
+
+        if (user == null) {
+            user = new User();
+            user.setKakaoId(kakaoId);
+            if (confirmation != null) {
+                user.setEmail(confirmation.getPersonalEmail());
+            }
+            user.setName(userDto.getName());
+            user.setMajor(userDto.getMajor());
+            user.setMajor_num(userDto.getMajor_num());
+            user.setGender(userDto.getGender());
+            user.setNickname(userDto.getNickname());
+            user.setUserRole("USER");
+
             userRepository.save(user);
+            return "회원가입 성공";
+        } else {
+            return "화원 정보를 정확히 기입해 주세요.";
         }
 
     }
-    public boolean isEmailVerified(String personalEmail) {
-        EmailConfirmation confirmation = confirmationRepository.findByPersonalEmail(personalEmail);
-        return confirmation != null && confirmation.isVerified();
-    }
+
+
+
 }
